@@ -1,0 +1,47 @@
+
+name: Validate Databricks Notebook
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-notebook:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate notebook structure
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("bronze_to_silver.ipynb")
+          assert path.is_file(), f"Notebook not found: {path}"
+
+          with path.open(encoding="utf-8") as f:
+              notebook = json.load(f)
+
+          assert notebook.get("nbformat", 0) >= 4
+          cells = notebook.get("cells", [])
+          code_cells = [
+              cell for cell in cells
+              if cell.get("cell_type") == "code"
+          ]
+
+          assert code_cells, "Notebook has no code cells"
+
+          print(f"Notebook valid: {path}")
+          print(f"Total cells: {len(cells)}")
+          print(f"Code cells: {len(code_cells)}")
+          PY
